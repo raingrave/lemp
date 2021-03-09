@@ -1,0 +1,53 @@
+version: '3.7'
+
+services:
+  php-fpm:
+    build: .docker/php-fpm
+    container_name: '$APP_NAME-php-fpm'
+    environment:
+      - COMPOSER_MEMORY_LIMIT=2G
+      - ENVIRONMENT=local
+    volumes:
+      - .:/var/www
+    networks:
+      - php-network
+    user: "1000:www-data"
+
+  nginx:
+    build: .docker/nginx
+    container_name: '$APP_NAME-nginx'
+    tty: true
+    ports:
+      - "80:80"
+    volumes:
+      - "${APP_PATH}:/var/www"
+    networks:
+      - php-network
+
+  mysql:
+    build: .docker/mysql
+    command: --innodb-use-native-aio=0 --default-authentication-plugin=mysql_native_password
+    container_name: '$APP_NAME-mysql'
+    tty: true
+    ports:
+      - "${DB_PORT}:3306"
+    volumes:
+      - ./.docker/mysql/dbdata:/var/lib/mysql
+    environment:
+      - 'MYSQL_DATABASE=${DB_NAME}'
+      - 'MYSQL_USER=${DB_USER}'
+      - 'MYSQL_PASSWORD=${DB_PASSWORD}'
+    networks:
+      - php-network
+
+  redis:
+    image: redis:6.0.5-alpine
+    container_name: '$APP_NAME-redis'
+    ports:
+      - "6380:6379"
+    networks:
+      - php-network
+
+networks:
+  php-network:
+    driver: bridge
